@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'user_provider.dart';
 import 'pay_page.dart';
+import 'auth_store.dart';
 
 const _green = Color(0xFF07C160);
 const _greenDark = Color(0xFF06AD56);
@@ -97,23 +98,73 @@ class _YunGeHomeViewState extends ConsumerState<YunGeHomeView> {
             color: Color(0xFF1A1A1A),
           ),
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.check_circle, size: 14, color: color),
-              const SizedBox(width: 4),
-              Text(label, style: TextStyle(fontSize: 12, color: color)),
-            ],
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle, size: 14, color: color),
+                  const SizedBox(width: 4),
+                  Text(label, style: TextStyle(fontSize: 12, color: color)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: _confirmLogout,
+              icon: const Icon(Icons.logout, size: 20, color: Colors.grey),
+              tooltip: '退出登录',
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
         ),
       ],
     );
+  }
+
+  Future<void> _confirmLogout() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('退出登录'),
+        content: const Text('确定要退出当前账号吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('退出', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    // 断开连接 + 清订阅 + 清登录态
+    try {
+      if (ref.read(isStartProvider)) {
+        await ref
+            .read(setupActionProvider.notifier)
+            .updateStatus(false, isInit: false);
+      }
+    } catch (_) {}
+    try {
+      // 删除所有 profile，避免下个账号看到上个账号的订阅
+      final profiles = ref.read(profilesProvider);
+      for (final p in profiles) {
+        ref.read(profilesProvider.notifier).del(p.id);
+      }
+    } catch (_) {}
+    await YunGeAuthStore.clear();
+    ref.read(logoutSignalProvider.notifier).trigger();
   }
 
   Widget _statusText(bool isStart) {

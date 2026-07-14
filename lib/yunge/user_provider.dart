@@ -39,3 +39,14 @@ class UserInfoNotifier extends Notifier<UserInfoState> {
 
 final userInfoProvider =
     NotifierProvider<UserInfoNotifier, UserInfoState>(UserInfoNotifier.new);
+
+/// 退出登录信号：每次退出自增，auth_gate 监听它回到登录页
+class LogoutSignal extends Notifier<int> {
+  @override
+  int build() => 0;
+  void trigger() => state++;
+}
+
+final logoutSignalProvider =
+    NotifierProvider<LogoutSignal, int>(LogoutSignal.new);
+

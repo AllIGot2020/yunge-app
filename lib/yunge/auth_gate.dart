@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'auth_store.dart';
 import 'login_page.dart';
+import 'user_provider.dart';
 
 class YunGeAuthGate extends ConsumerStatefulWidget {
   const YunGeAuthGate({super.key});
@@ -65,6 +66,15 @@ class _YunGeAuthGateState extends ConsumerState<YunGeAuthGate> {
 
   @override
   Widget build(BuildContext context) {
+    // 监听退出信号：退出时会自增，触发本 gate 清 session 回登录页
+    ref.listen(logoutSignalProvider, (prev, next) {
+      if (mounted) {
+        setState(() {
+          _session = null;
+        });
+      }
+    });
+
     if (_checking) {
       return const Scaffold(
         backgroundColor: Color(0xFF0D1420),
