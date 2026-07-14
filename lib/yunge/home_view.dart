@@ -6,10 +6,9 @@ import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'user_provider.dart';
-import 'v2board.dart';
+import 'pay_page.dart';
 
 const _green = Color(0xFF07C160);
 const _greenDark = Color(0xFF06AD56);
@@ -41,10 +40,9 @@ class _YunGeHomeViewState extends ConsumerState<YunGeHomeView> {
   }
 
   Future<void> _openRenew() async {
-    final uri = Uri.parse('${YunGeApi.panelBase}/#/plan');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const YunGePayPage()),
+    );
   }
 
   @override

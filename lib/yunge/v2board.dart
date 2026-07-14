@@ -77,6 +77,96 @@ class YunGeApi {
   static String subscribeUrl(String token) =>
       '$subBase/api/v1/client/subscribe?token=${Uri.encodeComponent(token)}&flag=clash';
 
+  // ============ 下单 / 支付 ============
+
+  /// 套餐列表
+  static Future<List<PlanItem>> fetchPlans(String authData) async {
+    final resp = await _dio.get(
+      '$_api/user/plan/fetch',
+      options: Options(headers: {'Authorization': authData}),
+    );
+    final data = resp.data;
+    if (data is Map && data['data'] is List) {
+      return (data['data'] as List)
+          .map((e) => PlanItem.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+    throw _dataErr(data, '获取套餐失败');
+  }
+
+  /// 支付方式列表
+  static Future<List<PaymentMethod>> fetchPaymentMethods(
+      String authData) async {
+    final resp = await _dio.get(
+      '$_api/user/order/getPaymentMethod',
+      options: Options(headers: {'Authorization': authData}),
+    );
+    final data = resp.data;
+    if (data is Map && data['data'] is List) {
+      return (data['data'] as List)
+          .map((e) => PaymentMethod.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+    throw _dataErr(data, '获取支付方式失败');
+  }
+
+  /// 下单，返回 trade_no（订单号）
+  static Future<String> saveOrder(
+      String authData, int planId, String period) async {
+    final resp = await _dio.post(
+      '$_api/user/order/save',
+      data: {'plan_id': '$planId', 'period': period},
+      options: Options(headers: {'Authorization': authData}),
+    );
+    final data = resp.data;
+    // save 返回 data 是 trade_no 字符串
+    if (data is Map && data['data'] != null && data['message'] == null) {
+      return '${data['data']}';
+    }
+    throw _dataErr(data, '下单失败');
+  }
+
+  /// 结账，返回 {type, data}（EPay: type=1，data 为收银台 URL）
+  static Future<CheckoutResult> checkout(
+      String authData, String tradeNo, int method) async {
+    final resp = await _dio.post(
+      '$_api/user/order/checkout',
+      data: {'trade_no': tradeNo, 'method': '$method'},
+      options: Options(headers: {'Authorization': authData}),
+    );
+    final data = resp.data;
+    if (data is Map && data.containsKey('type')) {
+      return CheckoutResult(
+        type: data['type'] is int
+            ? data['type']
+            : int.tryParse('${data['type']}') ?? 1,
+        data: '${data['data']}',
+      );
+    }
+    throw _dataErr(data, '结账失败');
+  }
+
+  /// 查询订单状态（0=待支付 3=已支付其它=处理中）
+  static Future<int> checkOrder(String authData, String tradeNo) async {
+    final resp = await _dio.get(
+      '$_api/user/order/check',
+      queryParameters: {'trade_no': tradeNo},
+      options: Options(headers: {'Authorization': authData}),
+    );
+    final data = resp.data;
+    if (data is Map && data['data'] != null) {
+      final v = data['data'];
+      return v is int ? v : int.tryParse('$v') ?? 0;
+    }
+    return 0;
+  }
+
+  static String _dataErr(dynamic data, String fallback) {
+    if (data is Map && data['message'] != null) return '${data['message']}';
+    return fallback;
+  }
+
+
   static String _errMsg(DioException e) {
     // 优先返回后端 message
     final resp = e.response?.data;
@@ -144,3 +234,89 @@ class UserInfo {
 
   int get used => u + d;
 }
+
+// ============ 下单/支付 模型 ============
+
+/// 支付周期（对应 v2board plan 表价格字段）
+class PlanPeriod {
+  final String key; // month_price / quarter_price / half_year_price / year_price
+  final String label;
+  final int price; // 分
+  const PlanPeriod(this.key, this.label, this.price);
+}
+
+class PlanItem {
+  final int id;
+  final String name;
+  final int transferEnable; // GB
+  final String? content;
+  final int? monthPrice;
+  final int? quarterPrice;
+  final int? halfYearPrice;
+  final int? yearPrice;
+
+  const PlanItem({
+    required this.id,
+    required this.name,
+    required this.transferEnable,
+    this.content,
+    this.monthPrice,
+    this.quarterPrice,
+    this.halfYearPrice,
+    this.yearPrice,
+  });
+
+  factory PlanItem.fromJson(Map<String, dynamic> j) {
+    int? _i(v) => v == null ? null : (v is int ? v : int.tryParse('$v'));
+    return PlanItem(
+      id: _i(j['id']) ?? 0,
+      name: '${j['name'] ?? ''}',
+      transferEnable: _i(j['transfer_enable']) ?? 0,
+      content: j['content']?.toString(),
+      monthPrice: _i(j['month_price']),
+      quarterPrice: _i(j['quarter_price']),
+      halfYearPrice: _i(j['half_year_price']),
+      yearPrice: _i(j['year_price']),
+    );
+  }
+
+  /// 可购买的周期列表（价格非空的）
+  List<PlanPeriod> get periods {
+    final list = <PlanPeriod>[];
+    if (monthPrice != null) list.add(PlanPeriod('month_price', '月付', monthPrice!));
+    if (quarterPrice != null) {
+      list.add(PlanPeriod('quarter_price', '季付', quarterPrice!));
+    }
+    if (halfYearPrice != null) {
+      list.add(PlanPeriod('half_year_price', '半年付', halfYearPrice!));
+    }
+    if (yearPrice != null) list.add(PlanPeriod('year_price', '年付', yearPrice!));
+    return list;
+  }
+}
+
+class PaymentMethod {
+  final int id;
+  final String name;
+  final String payment; // EPay 等
+  final String? icon;
+  const PaymentMethod({
+    required this.id,
+    required this.name,
+    required this.payment,
+    this.icon,
+  });
+  factory PaymentMethod.fromJson(Map<String, dynamic> j) => PaymentMethod(
+        id: j['id'] is int ? j['id'] : int.tryParse('${j['id']}') ?? 0,
+        name: '${j['name'] ?? ''}',
+        payment: '${j['payment'] ?? ''}',
+        icon: j['icon']?.toString(),
+      );
+}
+
+class CheckoutResult {
+  final int type; // 0:二维码内容 1:跳转URL -1:免费直接成功
+  final String data;
+  const CheckoutResult({required this.type, required this.data});
+}
+
