@@ -29,6 +29,7 @@ class _YunGePayPageState extends ConsumerState<YunGePayPage> {
   List<PlanItem> _plans = [];
   List<PaymentMethod> _methods = [];
   bool _loading = true;
+  bool _paying = false;
   String? _err;
 
   // 选择态
@@ -77,25 +78,22 @@ class _YunGePayPageState extends ConsumerState<YunGePayPage> {
       _toast('暂无可用支付方式');
       return;
     }
+    if (_paying) return;
     final method = _methods.first; // 你的面板只有 EPay 一个
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator(color: _green)),
-    );
+    setState(() => _paying = true);
     try {
       final tradeNo =
           await YunGeApi.saveOrder(_authData!, _plan!.id, _period!.key);
       final result = await YunGeApi.checkout(_authData!, tradeNo, method.id);
-      if (mounted) Navigator.of(context).pop(); // 关 loading
+      if (!mounted) return;
+      setState(() => _paying = false);
 
       if (result.type == -1) {
         // 免费/余额直接成功
         _onPaid();
         return;
       }
-      // type 1: url 收银台；type 0: 二维码内容
-      if (!mounted) return;
+      // 进收银台页（页内自己处理 webview / 二维码 / 浏览器）
       Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => _CashierPage(
           authData: _authData!,
@@ -105,8 +103,10 @@ class _YunGePayPageState extends ConsumerState<YunGePayPage> {
         ),
       ));
     } catch (e) {
-      if (mounted) Navigator.of(context).pop();
-      _toast('$e');
+      if (mounted) {
+        setState(() => _paying = false);
+        _toast('$e');
+      }
     }
   }
 
@@ -280,7 +280,7 @@ class _YunGePayPageState extends ConsumerState<YunGePayPage> {
               ),
             ),
             ElevatedButton(
-              onPressed: _period == null ? null : _pay,
+              onPressed: (_period == null || _paying) ? null : _pay,
               style: ElevatedButton.styleFrom(
                 backgroundColor: _green,
                 foregroundColor: Colors.white,
@@ -289,9 +289,16 @@ class _YunGePayPageState extends ConsumerState<YunGePayPage> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('立即支付',
-                  style:
-                      TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: _paying
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('立即支付',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -331,10 +338,8 @@ class _CashierPageState extends State<_CashierPage> {
       _webCtrl = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
         ..loadRequest(Uri.parse(widget.checkout.data));
-    } else if (widget.checkout.type == 1) {
-      // 桌面：直接用系统浏览器打开收银台
-      _openExternal();
     }
+    // 桌面端不自动跳浏览器，直接在 app 内显示二维码（用户扫码或手动点按钮打开）
     _startPoll();
   }
 
@@ -400,13 +405,14 @@ class _CashierPageState extends State<_CashierPage> {
     }
     // 二维码内容（type 0）：直接生成二维码
     if (widget.checkout.type == 0) {
-      return _qrView(widget.checkout.data, '请使用微信/支付宝扫码支付');
+      return _qrView(widget.checkout.data, '请使用微信/支付宝扫码支付',
+          showBrowserBtn: false);
     }
-    // 桌面 + url：显示二维码（把收银台URL编成码）+ 已在浏览器打开
-    return _qrView(widget.checkout.data, '已在浏览器打开收银台\n或扫码在手机上支付');
+    // 桌面 + url：app 内显示二维码，用户扫码；也可点按钮在浏览器打开
+    return _qrView(widget.checkout.data, '请用手机扫码支付', showBrowserBtn: true);
   }
 
-  Widget _qrView(String data, String tip) {
+  Widget _qrView(String data, String tip, {bool showBrowserBtn = false}) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -433,6 +439,18 @@ class _CashierPageState extends State<_CashierPage> {
           const SizedBox(height: 8),
           const Text('支付完成后将自动到账',
               style: TextStyle(fontSize: 12, color: Colors.grey)),
+          if (showBrowserBtn) ...[
+            const SizedBox(height: 20),
+            OutlinedButton.icon(
+              onPressed: _openExternal,
+              icon: const Icon(Icons.open_in_browser, size: 18),
+              label: const Text('在浏览器打开收银台'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _greenDark,
+                side: const BorderSide(color: _green),
+              ),
+            ),
+          ],
         ],
       ),
     );
