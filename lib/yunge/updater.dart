@@ -117,7 +117,7 @@ class _YunGeUpdateProgressDialogState
           else ...[
             LinearProgressIndicator(
               value: _progress,
-              color: const Color(0xFF07C160),
+              color: const Color(0xFFB08B8F),
               backgroundColor: const Color(0xFFE5E8EB),
             ),
             const SizedBox(height: 12),

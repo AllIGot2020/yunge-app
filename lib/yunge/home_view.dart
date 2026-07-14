@@ -11,8 +11,9 @@ import 'user_provider.dart';
 import 'pay_page.dart';
 import 'auth_store.dart';
 
-const _green = Color(0xFF07C160);
-const _greenDark = Color(0xFF06AD56);
+// 主题强调色（跟随 FlClash 原生淡调，取稍深的莫兰迪色保证对比度）
+const _green = Color(0xFFB08B8F);
+const _greenDark = Color(0xFF8F6B70);
 const _blue = Color(0xFF3A8CFF);
 
 class YunGeHomeView extends ConsumerStatefulWidget {
@@ -207,7 +208,7 @@ class _YunGeHomeViewState extends ConsumerState<YunGeHomeView> {
             shape: BoxShape.circle,
             gradient: RadialGradient(
               colors: isStart
-                  ? [const Color(0xFFDFF7E8), const Color(0xFFF4F6F8)]
+                  ? [const Color(0xFFF0E4E5), const Color(0xFFF4F6F8)]
                   : [const Color(0xFFECEFF2), const Color(0xFFF4F6F8)],
               stops: const [0.6, 1.0],
             ),

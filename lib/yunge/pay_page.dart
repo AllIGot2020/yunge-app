@@ -14,8 +14,8 @@ import 'v2board.dart';
 import 'auth_store.dart';
 import 'user_provider.dart';
 
-const _green = Color(0xFF07C160);
-const _greenDark = Color(0xFF06AD56);
+const _green = Color(0xFFB08B8F);
+const _greenDark = Color(0xFF8F6B70);
 
 class YunGePayPage extends ConsumerStatefulWidget {
   const YunGePayPage({super.key});
