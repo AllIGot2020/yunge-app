@@ -1,4 +1,4 @@
-// 云歌 · 会员信息状态（经典 Riverpod，不走 codegen）
+// 云歌 · 会员信息状态（新版 Riverpod Notifier，不走 codegen）
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'v2board.dart';
 import 'auth_store.dart';
@@ -17,8 +17,9 @@ class UserInfoState {
       );
 }
 
-class UserInfoNotifier extends StateNotifier<UserInfoState> {
-  UserInfoNotifier() : super(const UserInfoState());
+class UserInfoNotifier extends Notifier<UserInfoState> {
+  @override
+  UserInfoState build() => const UserInfoState();
 
   Future<void> refresh() async {
     final session = await YunGeAuthStore.load();
@@ -37,6 +38,4 @@ class UserInfoNotifier extends StateNotifier<UserInfoState> {
 }
 
 final userInfoProvider =
-    StateNotifierProvider<UserInfoNotifier, UserInfoState>(
-  (ref) => UserInfoNotifier(),
-);
+    NotifierProvider<UserInfoNotifier, UserInfoState>(UserInfoNotifier.new);
