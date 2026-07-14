@@ -196,7 +196,7 @@ class AppPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware 
             setIcon(
                 IconCompat.createWithResource(
                     GlobalState.application,
-                    R.mipmap.ic_launcher_round,
+                    R.mipmap.ic_launcher,
                 )
             )
             setIntent(QuickAction.TOGGLE.quickIntent)
