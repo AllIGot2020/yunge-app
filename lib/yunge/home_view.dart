@@ -363,11 +363,23 @@ class _YunGeHomeViewState extends ConsumerState<YunGeHomeView> {
     final us = ref.watch(userInfoProvider);
     final info = us.info;
     final planName = info?.planName ?? (info?.planId != null ? '已订阅套餐' : '暂无套餐');
-    final total = info?.transferEnable ?? 0;
-    final used = info?.used ?? 0;
+
+    // 流量优先用 FlClash 从订阅头解析的真实数据（user/info 不返回 u/d）
+    final sub = ref.watch(currentProfileProvider)?.subscriptionInfo;
+    final total = sub != null && sub.total > 0
+        ? sub.total
+        : (info?.transferEnable ?? 0);
+    final used = sub != null
+        ? (sub.upload + sub.download)
+        : (info?.used ?? 0);
+    // 到期：订阅头 expire（秒）优先，回退 user/info
+    final expireTs = (sub != null && sub.expire > 0)
+        ? sub.expire
+        : info?.expiredAt;
+
     final totalText = total > 0 ? _gb(total) : '—';
     final usedText = _gb(used);
-    final expire = _expireText(info?.expiredAt);
+    final expire = _expireText(expireTs);
 
     return Container(
       padding: const EdgeInsets.all(18),

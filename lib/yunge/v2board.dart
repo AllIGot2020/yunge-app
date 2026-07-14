@@ -2,7 +2,9 @@
 // 面板与订阅是两个域名（服务端确认）：
 //   登录/用户信息 -> israelpost-co.org
 //   订阅内容      -> aomozm.com
+import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 
 class YunGeApi {
   // API 域名（登录/用户信息/订阅都走这里）。
@@ -14,19 +16,33 @@ class YunGeApi {
   static const String panelBase = 'https://www.israelpost-co.org';
   static String get _api => '$apiBase/api/v1';
 
-  static final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
-      // V2board 习惯表单提交
-      contentType: Headers.formUrlEncodedContentType,
-      // 跟随重定向；接受所有状态码自己读后端 message（v2board 业务错误用 HTTP 500）
-      followRedirects: true,
-      maxRedirects: 5,
-      validateStatus: (status) => status != null && status < 600,
-      headers: {'Accept': 'application/json'},
-    ),
-  );
+  static final Dio _dio = _buildDio();
+
+  static Dio _buildDio() {
+    final dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
+        // V2board 习惯表单提交
+        contentType: Headers.formUrlEncodedContentType,
+        // 跟随重定向；接受所有状态码自己读后端 message（v2board 业务错误用 HTTP 500）
+        followRedirects: true,
+        maxRedirects: 5,
+        validateStatus: (status) => status != null && status < 600,
+        headers: {'Accept': 'application/json'},
+      ),
+    );
+    // 关键：对自己面板的 API 请求强制直连，绕过系统代理/TUN，
+    // 否则开启系统代理后请求被 mihomo 劫持，TLS 握手失败（HandshakeException）。
+    dio.httpClientAdapter = IOHttpClientAdapter(
+      createHttpClient: () {
+        final client = HttpClient();
+        client.findProxy = (uri) => 'DIRECT';
+        return client;
+      },
+    );
+    return dio;
+  }
 
   /// 登录，返回 {token, is_admin, auth_data}
   static Future<AuthData> login(String email, String password) async {
