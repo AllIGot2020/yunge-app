@@ -96,7 +96,6 @@ jobs:
       contents: write
     needs: [ build ]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -111,5 +110,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'v1.0.0' }}
+          name: 云歌看世界 ${{ github.ref_type == 'tag' && github.ref_name || 'v1.0.0' }}
           files: ./dist/*
           generate_release_notes: true
