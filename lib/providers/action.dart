@@ -10,6 +10,7 @@ import 'package:fl_clash/plugins/app.dart';
 import 'package:fl_clash/plugins/service.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/yunge/updater.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -95,7 +96,20 @@ class CommonAction extends _$CommonAction {
         cancelText: isUser ? null : currentAppLocalizations.noLongerRemind,
       );
       if (res == true) {
-        launchUrl(Uri.parse('https://github.com/$repository/releases/latest'));
+        // 云歌：app 内下载安装当前平台安装包，失败则回退跳浏览器
+        final assets = (data['assets'] as List?) ?? [];
+        final assetUrl = YunGeUpdater.pickAssetUrl(assets);
+        final ctx = globalState.navigatorKey.currentContext;
+        if (assetUrl != null && ctx != null) {
+          showDialog(
+            context: ctx,
+            barrierDismissible: false,
+            builder: (_) => YunGeUpdateProgressDialog(url: assetUrl),
+          );
+        } else {
+          launchUrl(
+              Uri.parse('https://github.com/$repository/releases/latest'));
+        }
       } else if (!isUser && res == false) {
         ref
             .read(appSettingProvider.notifier)
