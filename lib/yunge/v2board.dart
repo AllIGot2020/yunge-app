@@ -20,10 +20,10 @@ class YunGeApi {
       receiveTimeout: const Duration(seconds: 15),
       // V2board 习惯表单提交
       contentType: Headers.formUrlEncodedContentType,
-      // 跟随重定向，且不因非 2xx 抛异常（我们自己读后端 message）
+      // 跟随重定向；接受所有状态码自己读后端 message（v2board 业务错误用 HTTP 500）
       followRedirects: true,
       maxRedirects: 5,
-      validateStatus: (status) => status != null && status < 500,
+      validateStatus: (status) => status != null && status < 600,
       headers: {'Accept': 'application/json'},
     ),
   );
@@ -110,20 +110,45 @@ class YunGeApi {
     throw _dataErr(data, '获取支付方式失败');
   }
 
-  /// 下单，返回 trade_no（订单号）
+  /// 下单，返回 trade_no（订单号）。下单前自动清理待支付订单，避免"有未支付订单"卡住。
   static Future<String> saveOrder(
       String authData, int planId, String period) async {
+    await _cancelPendingOrders(authData);
     final resp = await _dio.post(
       '$_api/user/order/save',
       data: {'plan_id': '$planId', 'period': period},
       options: Options(headers: {'Authorization': authData}),
     );
     final data = resp.data;
-    // save 返回 data 是 trade_no 字符串
+    // save 成功时 data 是 trade_no 字符串（且无 message）
     if (data is Map && data['data'] != null && data['message'] == null) {
       return '${data['data']}';
     }
     throw _dataErr(data, '下单失败');
+  }
+
+  /// 取消该用户所有待支付订单（status==0）
+  static Future<void> _cancelPendingOrders(String authData) async {
+    try {
+      final resp = await _dio.get(
+        '$_api/user/order/fetch',
+        options: Options(headers: {'Authorization': authData}),
+      );
+      final data = resp.data;
+      if (data is Map && data['data'] is List) {
+        for (final o in (data['data'] as List)) {
+          if (o is Map && o['status'] == 0 && o['trade_no'] != null) {
+            await _dio.post(
+              '$_api/user/order/cancel',
+              data: {'trade_no': '${o['trade_no']}'},
+              options: Options(headers: {'Authorization': authData}),
+            );
+          }
+        }
+      }
+    } catch (_) {
+      // 清理失败不阻断下单（下单会给出后端提示）
+    }
   }
 
   /// 结账，返回 {type, data}（EPay: type=1，data 为收银台 URL）
