@@ -1,6 +1,7 @@
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/views/views.dart';
+import 'package:fl_clash/yunge/home_view.dart';
 import 'package:flutter/material.dart';
 
 class Navigation {
@@ -16,7 +17,7 @@ class Navigation {
         icon: const Icon(Icons.space_dashboard),
         label: PageLabel.dashboard,
         builder: (_) =>
-            const DashboardView(key: GlobalObjectKey(PageLabel.dashboard)),
+            const YunGeHomeView(key: GlobalObjectKey(PageLabel.dashboard)),
       ),
       NavigationItem(
         icon: const Icon(Icons.article),
