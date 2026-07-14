@@ -132,16 +132,17 @@ class _YunGeHomeViewState extends ConsumerState<YunGeHomeView> {
   Future<void> _confirmLogout() async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      useRootNavigator: true,
+      builder: (dialogContext) => AlertDialog(
         title: const Text('退出登录'),
         content: const Text('确定要退出当前账号吗？'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text('取消'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
             child: const Text('退出', style: TextStyle(color: Colors.red)),
           ),
         ],
