@@ -15,6 +15,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'pages/pages.dart';
+import 'yunge/auth_gate.dart';
 
 class Application extends ConsumerStatefulWidget {
   const Application({super.key});
@@ -180,7 +181,7 @@ class ApplicationState extends ConsumerState<Application> {
           home: child!,
         );
       },
-      child: const HomePage(),
+      child: const YunGeAuthGate(),
     );
   }
 
