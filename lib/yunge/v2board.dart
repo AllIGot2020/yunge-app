@@ -5,9 +5,14 @@
 import 'package:dio/dio.dart';
 
 class YunGeApi {
-  static const String panelBase = 'https://www.israelpost-co.org';
+  // API 域名（登录/用户信息/订阅都走这里）。
+  // 注意：israelpost-co.org 挂在 Cloudflare 上会 302 跳到前端站，调不了 API，
+  // 真正的 V2board 后端 API 在 aomozm.com（已实测确认）。
+  static const String apiBase = 'https://www.aomozm.com';
   static const String subBase = 'https://www.aomozm.com';
-  static String get _api => '$panelBase/api/v1';
+  // 面板站（仅用于注册/续费等网页跳转链接）
+  static const String panelBase = 'https://www.israelpost-co.org';
+  static String get _api => '$apiBase/api/v1';
 
   static final Dio _dio = Dio(
     BaseOptions(
@@ -15,6 +20,11 @@ class YunGeApi {
       receiveTimeout: const Duration(seconds: 15),
       // V2board 习惯表单提交
       contentType: Headers.formUrlEncodedContentType,
+      // 跟随重定向，且不因非 2xx 抛异常（我们自己读后端 message）
+      followRedirects: true,
+      maxRedirects: 5,
+      validateStatus: (status) => status != null && status < 500,
+      headers: {'Accept': 'application/json'},
     ),
   );
 
@@ -36,7 +46,11 @@ class YunGeApi {
               : int.tryParse('${d['is_admin']}') ?? 0,
         );
       }
-      throw '登录响应异常';
+      // 后端返回了错误 message（如"邮箱或密码错误"）
+      if (data is Map && data['message'] != null) {
+        throw '${data['message']}';
+      }
+      throw '登录失败（HTTP ${resp.statusCode}）';
     } on DioException catch (e) {
       throw _errMsg(e);
     }
