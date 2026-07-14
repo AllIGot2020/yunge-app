@@ -81,6 +81,9 @@ jobs:
           flutter --version
           flutter pub get
 
+      - name: Generate 云歌 icons
+        run: dart run flutter_launcher_icons
+
       - name: Build (${{ matrix.platform }})
         run: dart setup.dart ${{ matrix.platform }} ${{ env.IS_STABLE == 'true' && '--env stable' || '' }} -v
 
