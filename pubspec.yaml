@@ -129,7 +129,7 @@ flutter_intl:
 flutter_launcher_icons:
   image_path: "assets/yunge/icon.png"
   android: true
-  adaptive_icon_background: "#0D1420"
+  adaptive_icon_background: "@color/ic_launcher_background"
   adaptive_icon_foreground: "assets/yunge/icon_foreground.png"
   windows:
     generate: true
