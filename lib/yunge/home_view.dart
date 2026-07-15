@@ -36,6 +36,18 @@ class _YunGeHomeViewState extends ConsumerState<YunGeHomeView> {
 
   void _toggleConnect() {
     final isStart = ref.read(isStartProvider);
+    // 开启加速前，强制确保系统代理已打开——否则核心起来了但流量没被接管，
+    // 会出现「界面显示已连接但没网、要手动去托盘勾系统代理」的问题。
+    if (!isStart) {
+      final systemProxyOn = ref.read(
+        networkSettingProvider.select((s) => s.systemProxy),
+      );
+      if (!systemProxyOn) {
+        ref
+            .read(networkSettingProvider.notifier)
+            .update((s) => s.copyWith(systemProxy: true));
+      }
+    }
     ref
         .read(setupActionProvider.notifier)
         .updateStatus(!isStart, isInit: !ref.read(initProvider));
@@ -55,23 +67,26 @@ class _YunGeHomeViewState extends ConsumerState<YunGeHomeView> {
     return Container(
       color: const Color(0xFFF4F6F8),
       child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _topBar(coreStatus),
-              const SizedBox(height: 20),
-              _statusText(isStart),
-              const SizedBox(height: 16),
-              _powerButton(isStart),
-              const SizedBox(height: 24),
-              _ipDetection(),
-              const SizedBox(height: 20),
-              _trafficRow(),
-              const SizedBox(height: 16),
-              _memberCard(),
-            ],
+        child: Scrollbar(
+          thumbVisibility: true,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _topBar(coreStatus),
+                const SizedBox(height: 12),
+                _statusText(isStart),
+                const SizedBox(height: 10),
+                _powerButton(isStart),
+                const SizedBox(height: 14),
+                _ipDetection(),
+                const SizedBox(height: 14),
+                _trafficRow(),
+                const SizedBox(height: 12),
+                _memberCard(),
+              ],
+            ),
           ),
         ),
       ),
@@ -202,8 +217,8 @@ class _YunGeHomeViewState extends ConsumerState<YunGeHomeView> {
       child: GestureDetector(
         onTap: _toggleConnect,
         child: Container(
-          width: 180,
-          height: 180,
+          width: 150,
+          height: 150,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: RadialGradient(
@@ -215,8 +230,8 @@ class _YunGeHomeViewState extends ConsumerState<YunGeHomeView> {
           ),
           child: Center(
             child: Container(
-              width: 110,
-              height: 110,
+              width: 96,
+              height: 96,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
@@ -238,7 +253,7 @@ class _YunGeHomeViewState extends ConsumerState<YunGeHomeView> {
               child: const Icon(
                 Icons.power_settings_new,
                 color: Colors.white,
-                size: 46,
+                size: 40,
               ),
             ),
           ),
